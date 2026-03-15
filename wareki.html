@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>和暦西暦一致確認表 | べんりツール</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+      background: #f5f5f0;
+      color: #333;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #2c2c2c;
+      color: #fff;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    header h1 { font-size: 1.3rem; font-weight: 700; letter-spacing: 0.05em; }
+    header span { font-size: 0.8rem; color: #aaa; }
+
+    nav {
+      background: #fff;
+      border-bottom: 2px solid #e0e0e0;
+      padding: 0 24px;
+      display: flex;
+      overflow-x: auto;
+    }
+    nav a {
+      display: block;
+      padding: 12px 20px;
+      text-decoration: none;
+      color: #555;
+      font-size: 0.9rem;
+      border-bottom: 3px solid transparent;
+      white-space: nowrap;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    nav a.active, nav a:hover {
+      color: #e05a00;
+      border-bottom-color: #e05a00;
+    }
+
+    main {
+      max-width: 900px;
+      margin: 32px auto;
+      padding: 0 16px;
+    }
+
+    .tool-card {
+      background: #fff;
+      border-radius: 8px;
+      padding: 28px;
+      margin-bottom: 24px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+    .tool-card h2 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #f0f0f0;
+      color: #222;
+    }
+    .tool-card h2::before {
+      content: "▍";
+      color: #e05a00;
+      margin-right: 8px;
+    }
+
+    /* 変換ツール */
+    .converter {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+    .converter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .converter-group label {
+      font-size: 0.8rem;
+      color: #888;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+    .converter-group select,
+    .converter-group input[type="number"] {
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 9px 12px;
+      font-size: 1rem;
+      color: #333;
+      background: #fafafa;
+    }
+    .converter-group select:focus,
+    .converter-group input[type="number"]:focus {
+      outline: none;
+      border-color: #e05a00;
+      background: #fff;
+    }
+    .converter-group input[type="number"] { width: 90px; }
+    .converter-arrow {
+      font-size: 1.5rem;
+      color: #ccc;
+      padding-bottom: 6px;
+    }
+    .converter-result {
+      background: #fff8f4;
+      border: 1px solid #ffd6b8;
+      border-radius: 6px;
+      padding: 10px 18px;
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #e05a00;
+      min-width: 160px;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+    }
+
+    /* 元号バッジ */
+    .era-badge {
+      display: inline-block;
+      border-radius: 3px;
+      padding: 2px 8px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    .era-meiji  { background: #7c6d5a; }
+    .era-taisho { background: #5a7c6d; }
+    .era-showa  { background: #4a6a9c; }
+    .era-heisei { background: #7c4a9c; }
+    .era-reiwa  { background: #e05a00; }
+
+    /* フィルタバー */
+    .filter-bar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+      align-items: center;
+    }
+    .filter-btn {
+      border: 2px solid transparent;
+      border-radius: 20px;
+      padding: 5px 16px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      color: #fff;
+    }
+    .filter-btn[data-era="all"]    { background: #555; }
+    .filter-btn[data-era="meiji"]  { background: #7c6d5a; }
+    .filter-btn[data-era="taisho"] { background: #5a7c6d; }
+    .filter-btn[data-era="showa"]  { background: #4a6a9c; }
+    .filter-btn[data-era="heisei"] { background: #7c4a9c; }
+    .filter-btn[data-era="reiwa"]  { background: #e05a00; }
+    .filter-btn.active { outline: 3px solid #333; outline-offset: 2px; }
+    .filter-btn:not(.active) { opacity: 0.55; }
+    .filter-btn:hover { opacity: 1; }
+
+    /* 検索 */
+    .search-input {
+      border: 1px solid #ddd;
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 0.9rem;
+      width: 120px;
+      transition: border-color 0.2s, width 0.2s;
+    }
+    .search-input:focus {
+      outline: none;
+      border-color: #e05a00;
+      width: 160px;
+    }
+
+    /* テーブル */
+    .table-wrap {
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    thead th {
+      background: #f0f0ec;
+      padding: 10px 14px;
+      text-align: left;
+      font-weight: 700;
+      color: #555;
+      font-size: 0.8rem;
+      letter-spacing: 0.05em;
+      border-bottom: 2px solid #ddd;
+      white-space: nowrap;
+    }
+    tbody tr {
+      border-bottom: 1px solid #f0f0f0;
+      transition: background 0.1s;
+    }
+    tbody tr:hover { background: #fffaf7; }
+    tbody tr.hidden { display: none; }
+    tbody td {
+      padding: 9px 14px;
+      vertical-align: middle;
+    }
+    td.seireki {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #222;
+    }
+    td.wareki {
+      font-weight: 600;
+      color: #444;
+    }
+    td.note {
+      font-size: 0.8rem;
+      color: #aaa;
+    }
+    /* 元号が変わる行をハイライト */
+    tbody tr.era-start td {
+      border-top: 2px solid #ddd;
+    }
+
+    footer {
+      text-align: center;
+      padding: 32px;
+      color: #aaa;
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>べんりツール</h1>
+  <span>シンプルな日本語ユーティリティ集</span>
+</header>
+
+<nav>
+  <a href="index.html">日付計算</a>
+  <a href="wareki.html" class="active">和暦西暦</a>
+  <a href="#">年齢計算</a>
+  <a href="#">単位変換</a>
+  <a href="#">文字数カウント</a>
+</nav>
+
+<main>
+
+  <!-- 変換ツール -->
+  <div class="tool-card">
+    <h2>和暦 ↔ 西暦　変換</h2>
+    <div class="converter">
+      <div class="converter-group">
+        <label>元号</label>
+        <select id="eraSelect">
+          <option value="reiwa">令和</option>
+          <option value="heisei">平成</option>
+          <option value="showa">昭和</option>
+          <option value="taisho">大正</option>
+          <option value="meiji">明治</option>
+        </select>
+      </div>
+      <div class="converter-group">
+        <label>年</label>
+        <input type="number" id="warekiYear" value="1" min="1" max="99">
+      </div>
+      <div class="converter-arrow">→</div>
+      <div class="converter-group">
+        <label>西暦</label>
+        <div class="converter-result" id="seirekiResult">—</div>
+      </div>
+    </div>
+    <div style="margin: 20px 0; border-top: 1px solid #f0f0f0;"></div>
+    <div class="converter">
+      <div class="converter-group">
+        <label>西暦</label>
+        <input type="number" id="seirekiInput" placeholder="例: 1990" min="1868" max="2099" style="width:110px">
+        <small style="color:#aaa; font-size:0.75rem; margin-top:3px;">1868〜</small>
+      </div>
+      <div class="converter-arrow">→</div>
+      <div class="converter-group">
+        <label>和暦</label>
+        <div class="converter-result" id="warekiResult">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 一致確認表 -->
+  <div class="tool-card">
+    <h2>和暦西暦 一致確認表（明治〜令和）</h2>
+
+    <div class="filter-bar">
+      <button class="filter-btn active" data-era="all" onclick="filterEra('all')">すべて</button>
+      <button class="filter-btn" data-era="meiji" onclick="filterEra('meiji')">明治</button>
+      <button class="filter-btn" data-era="taisho" onclick="filterEra('taisho')">大正</button>
+      <button class="filter-btn" data-era="showa" onclick="filterEra('showa')">昭和</button>
+      <button class="filter-btn" data-era="heisei" onclick="filterEra('heisei')">平成</button>
+      <button class="filter-btn" data-era="reiwa" onclick="filterEra('reiwa')">令和</button>
+      <input class="search-input" type="number" id="searchYear" placeholder="西暦で絞込" min="1868" oninput="searchByYear(this.value)">
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>元号</th>
+            <th>和暦</th>
+            <th>西暦</th>
+            <th>備考</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <!-- JSで生成 -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  べんりツール &copy; 2025
+</footer>
+
+<script>
+  // 元号定義（開始西暦年、元年の西暦、終了西暦年）
+  const ERAS = [
+    { id: 'meiji',  name: '明治', kanji: '明治', start: 1868, base: 1867, end: 1912 },
+    { id: 'taisho', name: '大正', kanji: '大正', start: 1912, base: 1911, end: 1926 },
+    { id: 'showa',  name: '昭和', kanji: '昭和', start: 1926, base: 1925, end: 1989 },
+    { id: 'heisei', name: '平成', kanji: '平成', start: 1989, base: 1988, end: 2019 },
+    { id: 'reiwa',  name: '令和', kanji: '令和', start: 2019, base: 2018, end: null },
+  ];
+
+  // 元年の別称
+  const GANNEN_NOTE = {
+    meiji:  { 1868: '明治元年' },
+    taisho: { 1912: '大正元年' },
+    showa:  { 1926: '昭和元年' },
+    heisei: { 1989: '平成元年' },
+    reiwa:  { 2019: '令和元年' },
+  };
+
+  // 特記事項
+  const NOTES = {
+    1868: '明治改元（旧: 慶応4年）',
+    1912: '大正改元（旧: 明治45年）',
+    1926: '昭和改元（旧: 大正15年）',
+    1945: '終戦',
+    1989: '平成改元（旧: 昭和64年）',
+    2019: '令和改元（旧: 平成31年）',
+  };
+
+  // 西暦 → 和暦
+  function seirekiToWareki(year) {
+    for (let i = ERAS.length - 1; i >= 0; i--) {
+      const era = ERAS[i];
+      if (year >= era.start) {
+        const nengo = year - era.base;
+        return { era, nengo };
+      }
+    }
+    return null;
+  }
+
+  // 和暦 → 西暦
+  function warekiToSeireki(eraId, nengo) {
+    const era = ERAS.find(e => e.id === eraId);
+    if (!era) return null;
+    const seireki = era.base + nengo;
+    // 範囲チェック
+    if (seireki < era.start) return null;
+    if (era.end && seireki > era.end) return null;
+    return seireki;
+  }
+
+  // テーブル生成
+  function buildTable() {
+    const tbody = document.getElementById('tableBody');
+    const currentYear = new Date().getFullYear();
+    const rows = [];
+
+    for (const era of ERAS) {
+      const endYear = era.end || currentYear;
+      for (let y = era.start; y <= endYear; y++) {
+        const nengo = y - era.base;
+        const nengoStr = nengo === 1 ? '元年' : `${nengo}年`;
+        const note = NOTES[y] || '';
+        const isStart = (y === era.start);
+        rows.push({ era, seireki: y, nengo, nengoStr, note, isStart });
+      }
+    }
+
+    tbody.innerHTML = rows.map(r => `
+      <tr data-era="${r.era.id}" data-year="${r.seireki}" class="${r.isStart ? 'era-start' : ''}">
+        <td><span class="era-badge era-${r.era.id}">${r.era.kanji}</span></td>
+        <td class="wareki">${r.era.kanji}${r.nengoStr}</td>
+        <td class="seireki">${r.seireki}年</td>
+        <td class="note">${r.note}</td>
+      </tr>
+    `).join('');
+  }
+
+  // フィルタ
+  function filterEra(eraId) {
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.era === eraId);
+    });
+    document.getElementById('searchYear').value = '';
+
+    document.querySelectorAll('#tableBody tr').forEach(tr => {
+      if (eraId === 'all') {
+        tr.classList.remove('hidden');
+      } else {
+        tr.classList.toggle('hidden', tr.dataset.era !== eraId);
+      }
+    });
+  }
+
+  // 西暦検索
+  function searchByYear(val) {
+    if (!val) {
+      filterEra('all');
+      return;
+    }
+    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+
+    document.querySelectorAll('#tableBody tr').forEach(tr => {
+      tr.classList.toggle('hidden', !tr.dataset.year.startsWith(val));
+    });
+  }
+
+  // 変換ツール：和暦→西暦（リアルタイム）
+  function updateSeireki() {
+    const eraId = document.getElementById('eraSelect').value;
+    const nengo = parseInt(document.getElementById('warekiYear').value);
+    const el = document.getElementById('seirekiResult');
+
+    if (isNaN(nengo) || nengo < 1) { el.textContent = '—'; return; }
+
+    const seireki = warekiToSeireki(eraId, nengo);
+    if (!seireki) {
+      el.textContent = '範囲外';
+      el.style.color = '#c00';
+    } else {
+      const era = ERAS.find(e => e.id === eraId);
+      el.textContent = `${seireki}年`;
+      el.style.color = '#e05a00';
+    }
+  }
+
+  // 変換ツール：西暦→和暦（リアルタイム）
+  function updateWareki() {
+    const year = parseInt(document.getElementById('seirekiInput').value);
+    const el = document.getElementById('warekiResult');
+
+    if (isNaN(year)) { el.textContent = '—'; return; }
+    if (year < 1868) { el.textContent = '明治以前'; el.style.color = '#aaa'; return; }
+
+    const result = seirekiToWareki(year);
+    if (!result) { el.textContent = '—'; return; }
+
+    const { era, nengo } = result;
+    const nengoStr = nengo === 1 ? '元年' : `${nengo}年`;
+    el.textContent = `${era.kanji}${nengoStr}`;
+    el.style.color = '#e05a00';
+  }
+
+  // イベント設定
+  document.getElementById('eraSelect').addEventListener('change', updateSeireki);
+  document.getElementById('warekiYear').addEventListener('input', updateSeireki);
+  document.getElementById('seirekiInput').addEventListener('input', updateWareki);
+
+  // 初期化
+  buildTable();
+  updateSeireki();
+</script>
+
+</body>
+</html>
